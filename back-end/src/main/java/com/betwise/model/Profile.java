@@ -13,15 +13,10 @@ public class Profile {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private Long userId;
-
     private String riskTolerance;
-
     private String experienceLevel;
-
     private String goal;
-
     public Profile() {
     }
 
