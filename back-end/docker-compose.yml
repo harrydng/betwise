@@ -3,10 +3,10 @@ services:
     image: mysql:8.4
     container_name: betwise-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: harry123
       MYSQL_DATABASE: betwise
       MYSQL_USER: betwise
-      MYSQL_PASSWORD: betwisepassword
+      MYSQL_PASSWORD: harry123
     ports:
       - "3306:3306"
     volumes:
