@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.betwise.model.User;
+import org.springframework.security.core.Authentication;
+
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -37,20 +40,20 @@ public class UserController {
                 .body(user);
     }
 
-    /**
-     * API to listen to get the User for the front-end
-     * 
-     * @param id
-     * @return
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUser(
-            @PathVariable Long id) {
+    // /**
+    //  * API to listen to get the User for the front-end
+    //  * 
+    //  * @param id
+    //  * @return
+    //  */
+    // @GetMapping("/{id}")
+    // public ResponseEntity<UserResponse> getUser(
+    //         @PathVariable Long id) {
 
-        UserResponse user = userService.getUser(id);
+    //     UserResponse user = userService.getUser(id);
 
-        return ResponseEntity.ok(user);
-    }
+    //     return ResponseEntity.ok(user);
+    // }
 
     /**
      * API to listen to update the user given the information fron the front
@@ -59,14 +62,16 @@ public class UserController {
      * @param request
      * @return
      */
-    @PatchMapping("/{id}")
-    public ResponseEntity<UserResponse> updateUser(
-            @PathVariable Long id,
+    @PatchMapping("/me")
+    public ResponseEntity<UserResponse> updateCurrentUser(
+            Authentication authentication,
             @RequestBody UpdateUserRequest request) {
 
-        UserResponse user = userService.updateUser(id, request);
+        User user = (User) authentication.getPrincipal();
 
-        return ResponseEntity.ok(user);
+        UserResponse response = userService.updateUser(user.getId(), request);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -76,12 +81,16 @@ public class UserController {
      * @param request
      * @return
      */
-    @PatchMapping("/{id}/password")
-    public ResponseEntity<Void> updatePassword(
-            @PathVariable Long id,
+    @PatchMapping("/me/password")
+    public ResponseEntity<Void> updateCurrentUserPassword(
+            Authentication authentication,
             @RequestBody UpdatePasswordRequest request) {
 
-        userService.updatePassword(id, request);
+        User user = (User) authentication.getPrincipal();
+
+        userService.updatePassword(
+                user.getId(),
+                request);
 
         return ResponseEntity.noContent().build();
     }
@@ -89,12 +98,24 @@ public class UserController {
     /**
      * Deleting the Account
      */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(
-            @PathVariable Long id) {
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteCurrentUser(
+            Authentication authentication) {
 
-        userService.deleteUser(id);
+        User user = (User) authentication.getPrincipal();
+
+        userService.deleteUser(user.getId());
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getCurrentUser(
+            Authentication authentication) {
+
+        User user = (User) authentication.getPrincipal();
+
+        return ResponseEntity.ok(
+                new UserResponse(user));
     }
 }
