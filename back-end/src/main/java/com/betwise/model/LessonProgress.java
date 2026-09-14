@@ -5,12 +5,12 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-    name = "lesson_progress",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            columnNames = {"user_id", "lesson_id"}
-        )
-    }
+        name = "lesson_progress",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        columnNames = {"user_id", "lesson_id"}
+                )
+        }
 )
 public class LessonProgress {
 
@@ -47,6 +47,14 @@ public class LessonProgress {
     public LessonProgress() {
     }
 
+    public LessonProgress(
+            User user,
+            Lesson lesson) {
+
+        this.user = user;
+        this.lesson = lesson;
+    }
+
     @PrePersist
     protected void onCreate() {
         startedAt = LocalDateTime.now();
@@ -56,5 +64,69 @@ public class LessonProgress {
     @PreUpdate
     protected void onUpdate() {
         lastAccessedAt = LocalDateTime.now();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public Lesson getLesson() {
+        return lesson;
+    }
+
+    public Integer getCurrentCheckpoint() {
+        return currentCheckpoint;
+    }
+
+    public Integer getCompletedCheckpoints() {
+        return completedCheckpoints;
+    }
+
+    public boolean isCompleted() {
+        return Boolean.TRUE.equals(completed);
+    }
+
+    public LocalDateTime getStartedAt() {
+        return startedAt;
+    }
+
+    public LocalDateTime getLastAccessedAt() {
+        return lastAccessedAt;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCurrentCheckpoint(
+            Integer currentCheckpoint) {
+
+        this.currentCheckpoint = currentCheckpoint;
+    }
+
+    public void setCompletedCheckpoints(
+            Integer completedCheckpoints) {
+
+        this.completedCheckpoints = completedCheckpoints;
+    }
+
+    public void setCompleted(Boolean completed) {
+        this.completed = completed;
+    }
+
+    public void setCompletedAt(
+            LocalDateTime completedAt) {
+
+        this.completedAt = completedAt;
+    }
+
+    public void setLastAccessedAt(
+            LocalDateTime lastAccessedAt) {
+
+        this.lastAccessedAt = lastAccessedAt;
     }
 }

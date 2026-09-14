@@ -5,12 +5,12 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(
-    name = "quiz_questions",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            columnNames = {"quiz_id", "question_order"}
-        )
-    }
+        name = "quiz_questions",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        columnNames = {"quiz_id", "question_order"}
+                )
+        }
 )
 public class QuizQuestion {
 
@@ -29,9 +29,9 @@ public class QuizQuestion {
     private String choices;
 
     @Column(
-        name = "correct_answer",
-        nullable = false,
-        length = 255
+            name = "correct_answer",
+            nullable = false,
+            length = 255
     )
     private String correctAnswer;
 
@@ -39,12 +39,65 @@ public class QuizQuestion {
     private Integer questionOrder;
 
     @Column(
-        name = "cash_reward",
-        nullable = false,
-        precision = 15,
-        scale = 2
+            name = "cash_reward",
+            nullable = false,
+            precision = 15,
+            scale = 2
     )
     private BigDecimal cashReward;
 
-    public QuizQuestion() {}
+    public QuizQuestion() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Quiz getQuiz() {
+        return quiz;
+    }
+
+    public String getQuestion() {
+        return question;
+    }
+
+    public String getChoices() {
+        return choices;
+    }
+
+    public String getCorrectAnswer() {
+        return correctAnswer;
+    }
+
+    public Integer getQuestionOrder() {
+        return questionOrder;
+    }
+
+    public BigDecimal getCashReward() {
+        return cashReward;
+    }
+
+    public void setQuiz(Quiz quiz) {
+        this.quiz = quiz;
+    }
+
+    public void setQuestion(String question) {
+        this.question = question;
+    }
+
+    public void setChoices(String choices) {
+        this.choices = choices;
+    }
+
+    public void setCorrectAnswer(String correctAnswer) {
+        this.correctAnswer = correctAnswer;
+    }
+
+    public void setQuestionOrder(Integer questionOrder) {
+        this.questionOrder = questionOrder;
+    }
+
+    public void setCashReward(BigDecimal cashReward) {
+        this.cashReward = cashReward;
+    }
 }
