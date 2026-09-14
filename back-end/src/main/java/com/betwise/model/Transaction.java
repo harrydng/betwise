@@ -27,33 +27,16 @@ public class Transaction {
     private Asset asset;
 
     @Enumerated(EnumType.STRING)
-    @Column(
-        name = "transaction_type",
-        nullable = false,
-        length = 20
-    )
+    @Column(name = "transaction_type", nullable = false, length = 20)
     private TransactionType transactionType;
 
-    @Column(
-        nullable = false,
-        precision = 19,
-        scale = 6
-    )
+    @Column(nullable = false, precision = 19, scale = 6)
     private BigDecimal quantity;
 
-    @Column(
-        nullable = false,
-        precision = 15,
-        scale = 2
-    )
+    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
-    @Column(
-        name = "total_amount",
-        nullable = false,
-        precision = 15,
-        scale = 2
-    )
+    @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;
 
     @Column(name = "executed_at", nullable = false)
@@ -66,19 +49,20 @@ public class Transaction {
     }
 
     public Transaction(
-        Portfolio portfolio,
-        Asset asset,
-        TransactionType transactionType,
-        BigDecimal quantity,
-        BigDecimal price
-    ) {
+            Portfolio portfolio,
+            Asset asset,
+            TransactionType transactionType,
+            BigDecimal quantity,
+            BigDecimal price) {
         this.portfolio = portfolio;
         this.asset = asset;
         this.transactionType = transactionType;
         this.quantity = quantity;
         this.price = price;
 
-        this.totalAmount = quantity.multiply(price);
+        this.totalAmount = quantity
+                .multiply(price)
+                .setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
     @PrePersist
@@ -120,5 +104,9 @@ public class Transaction {
 
     public LocalDateTime getExecutedAt() {
         return executedAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 }

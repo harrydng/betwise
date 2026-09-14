@@ -20,20 +20,10 @@ public class Portfolio {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(
-        name = "cash_balance",
-        nullable = false,
-        precision = 15,
-        scale = 2
-    )
+    @Column(name = "cash_balance", nullable = false, precision = 15, scale = 2)
     private BigDecimal cashBalance;
 
-    @Column(
-        name = "starting_balance",
-        nullable = false,
-        precision = 15,
-        scale = 2
-    )
+    @Column(name = "starting_balance", nullable = false, precision = 15, scale = 2)
     private BigDecimal startingBalance;
 
     @Column(name = "created_at", nullable = false)
@@ -46,10 +36,9 @@ public class Portfolio {
     }
 
     public Portfolio(
-        User user,
-        String name,
-        BigDecimal startingBalance
-    ) {
+            User user,
+            String name,
+            BigDecimal startingBalance) {
         this.user = user;
         this.name = name;
         this.startingBalance = startingBalance;
@@ -105,5 +94,13 @@ public class Portfolio {
 
     public void setStartingBalance(BigDecimal startingBalance) {
         this.startingBalance = startingBalance;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }

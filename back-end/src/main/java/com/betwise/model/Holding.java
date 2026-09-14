@@ -6,14 +6,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-    name = "holdings",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            columnNames = {"portfolio_id", "asset_id"}
-        )
-    }
-)
+@Table(name = "holdings", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "portfolio_id", "asset_id" })
+})
 public class Holding {
 
     @Id
@@ -28,19 +23,10 @@ public class Holding {
     @JoinColumn(name = "asset_id", nullable = false)
     private Asset asset;
 
-    @Column(
-        nullable = false,
-        precision = 19,
-        scale = 6
-    )
+    @Column(nullable = false, precision = 19, scale = 6)
     private BigDecimal quantity;
 
-    @Column(
-        name = "average_cost",
-        nullable = false,
-        precision = 15,
-        scale = 2
-    )
+    @Column(name = "average_cost", nullable = false, precision = 15, scale = 2)
     private BigDecimal averageCost;
 
     @Column(name = "created_at", nullable = false)
@@ -53,11 +39,10 @@ public class Holding {
     }
 
     public Holding(
-        Portfolio portfolio,
-        Asset asset,
-        BigDecimal quantity,
-        BigDecimal averageCost
-    ) {
+            Portfolio portfolio,
+            Asset asset,
+            BigDecimal quantity,
+            BigDecimal averageCost) {
         this.portfolio = portfolio;
         this.asset = asset;
         this.quantity = quantity;
@@ -109,5 +94,13 @@ public class Holding {
 
     public void setAverageCost(BigDecimal averageCost) {
         this.averageCost = averageCost;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }
