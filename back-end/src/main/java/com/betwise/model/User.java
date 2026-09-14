@@ -6,12 +6,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-    name = "users",
-    uniqueConstraints = {
+@Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(columnNames = "email")
-    }
-)
+})
 public class User {
 
     public enum RiskTolerance {
@@ -71,11 +68,10 @@ public class User {
     }
 
     public User(
-        String name,
-        LocalDate dateOfBirth,
-        String email,
-        String passwordHash
-    ) {
+            String name,
+            LocalDate dateOfBirth,
+            String email,
+            String passwordHash) {
         this.name = name;
         this.dateOfBirth = dateOfBirth;
         this.email = email;
@@ -95,6 +91,10 @@ public class User {
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getName() {
