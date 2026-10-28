@@ -1,5 +1,7 @@
 package com.betwise.service;
 
+import com.betwise.exception.ConflictException;
+import com.betwise.exception.ResourceNotFoundException;
 import com.betwise.dto.CreateUserRequest;
 import com.betwise.dto.UpdatePasswordRequest;
 import com.betwise.dto.UpdateUserRequest;
@@ -9,18 +11,22 @@ import com.betwise.repository.UserRepository;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AccountCleanupService accountCleanupService;
 
     public UserService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            AccountCleanupService accountCleanupService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.accountCleanupService = accountCleanupService;
     }
 
     /**
@@ -33,7 +39,7 @@ public class UserService {
         String email = request.getEmail().toLowerCase().trim();
 
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email is already in use");
+            throw new ConflictException("Email is already in use");
         }
 
         User user = new User();
@@ -65,7 +71,7 @@ public class UserService {
     public UserResponse getUser(Long userId) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return new UserResponse(user);
     }
@@ -82,7 +88,7 @@ public class UserService {
             UpdateUserRequest request) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (request.getName() != null) {
             user.setName(request.getName());
@@ -120,7 +126,7 @@ public class UserService {
             UpdatePasswordRequest request) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         boolean matches = passwordEncoder.matches(
                 request.getCurrentPassword(),
@@ -142,11 +148,16 @@ public class UserService {
      * 
      * @param userId
      */
+    @Transactional
     public void deleteUser(Long userId) {
 
         if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User not found");
+            throw new ResourceNotFoundException("User not found");
         }
+
+        // Portfolios, watchlists, progress and notifications all reference
+        // the user, so remove them first or the foreign keys block the delete.
+        accountCleanupService.deleteEverythingOwnedBy(userId);
 
         userRepository.deleteById(userId);
     }
@@ -158,6 +169,6 @@ public class UserService {
      */
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email.toLowerCase().trim())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

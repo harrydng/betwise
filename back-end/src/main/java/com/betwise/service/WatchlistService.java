@@ -1,5 +1,7 @@
 package com.betwise.service;
 
+import com.betwise.exception.ConflictException;
+import com.betwise.exception.ResourceNotFoundException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -48,7 +50,7 @@ public class WatchlistService {
         if (watchlistRepository.existsByNameAndUserId(
                 name,
                 user.getId())) {
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     "Watchlist name already exists");
         }
 
@@ -114,7 +116,7 @@ public class WatchlistService {
                                     name,
                                     user.getId())) {
 
-                throw new IllegalArgumentException(
+                throw new ConflictException(
                         "Watchlist name already exists");
             }
 
@@ -157,7 +159,7 @@ public class WatchlistService {
 
         Asset asset = assetRepository.findById(
                 request.getAssetId())
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Asset not found"));
 
         if (watchlistItemRepository
@@ -165,7 +167,7 @@ public class WatchlistService {
                         watchlistId,
                         asset.getId())) {
 
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     "Asset already exists in watchlist");
         }
 
@@ -196,7 +198,7 @@ public class WatchlistService {
                 .findByIdAndWatchlistId(
                         itemId,
                         watchlistId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Watchlist item not found"));
 
         watchlistItemRepository.delete(item);
@@ -210,7 +212,7 @@ public class WatchlistService {
                 .findByIdAndUserId(
                         watchlistId,
                         userId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Watchlist not found"));
     }
 }

@@ -1,11 +1,14 @@
 package com.betwise.service;
 
+import com.betwise.exception.ConflictException;
+import com.betwise.exception.ResourceNotFoundException;
 import com.betwise.dto.*;
 
 import com.betwise.model.Asset;
 import com.betwise.model.Holding;
 import com.betwise.model.Portfolio;
 import com.betwise.model.PortfolioCashEvent;
+import com.betwise.model.PriceRange;
 import com.betwise.model.Transaction;
 import com.betwise.model.User;
 
@@ -21,7 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PortfolioService {
@@ -32,6 +40,7 @@ public class PortfolioService {
         private final AssetRepository assetRepository;
         private final PortfolioCashEventRepository cashEventRepository;
         private final MarketPriceService marketPriceService;
+        private final NotificationService notificationService;
 
         public PortfolioService(
                         PortfolioRepository portfolioRepository,
@@ -39,13 +48,15 @@ public class PortfolioService {
                         TransactionRepository transactionRepository,
                         PortfolioCashEventRepository cashEventRepository,
                         MarketPriceService marketPriceService,
-                        AssetRepository assetRepository) {
+                        AssetRepository assetRepository,
+                        NotificationService notificationService) {
                 this.portfolioRepository = portfolioRepository;
                 this.holdingRepository = holdingRepository;
                 this.transactionRepository = transactionRepository;
                 this.cashEventRepository = cashEventRepository;
                 this.marketPriceService = marketPriceService;
                 this.assetRepository = assetRepository;
+                this.notificationService = notificationService;
         }
 
         public PortfolioResponse createPortfolio(
@@ -72,7 +83,7 @@ public class PortfolioService {
                 if (portfolioRepository.existsByNameAndUserId(
                                 name,
                                 user.getId())) {
-                        throw new IllegalArgumentException(
+                        throw new ConflictException(
                                         "Portfolio name already exists");
                 }
 
@@ -133,7 +144,7 @@ public class PortfolioService {
                                                                         name,
                                                                         user.getId())) {
 
-                                throw new IllegalArgumentException(
+                                throw new ConflictException(
                                                 "Portfolio name already exists");
                         }
 
@@ -191,6 +202,120 @@ public class PortfolioService {
                                 .toList();
         }
 
+        /**
+         * The portfolio's total value over a range, rebuilt by replaying its
+         * trades and cash events against each asset's price history. Points
+         * before the portfolio existed are left out, and the last point is
+         * always the live value.
+         */
+        public PriceHistoryResponse getPortfolioHistory(
+                        User user,
+                        Long portfolioId,
+                        String rangeLabel) {
+
+                Portfolio portfolio = getOwnedPortfolio(
+                                portfolioId,
+                                user.getId());
+
+                PriceRange range = PriceRange.fromLabel(rangeLabel);
+                LocalDateTime now = LocalDateTime.now();
+                List<LocalDateTime> grid = range.timestamps(now);
+
+                List<Transaction> transactions = new ArrayList<>(
+                                transactionRepository.findByPortfolioIdOrderByExecutedAtDesc(portfolioId));
+                Collections.reverse(transactions);
+
+                List<PortfolioCashEvent> cashEvents = new ArrayList<>(
+                                cashEventRepository.findByPortfolioIdOrderByCreatedAtDesc(portfolioId));
+                Collections.reverse(cashEvents);
+
+                // Price paths for every asset the portfolio has ever traded,
+                // aligned point-for-point with `grid`.
+                Map<String, List<PricePointResponse>> prices = new HashMap<>();
+
+                for (Transaction transaction : transactions) {
+                        prices.computeIfAbsent(
+                                        transaction.getAsset().getTicker(),
+                                        ticker -> marketPriceService.getPriceHistory(ticker, range, now));
+                }
+
+                List<PricePointResponse> points = new ArrayList<>();
+                LocalDateTime createdAt = portfolio.getCreatedAt();
+
+                if (createdAt.isAfter(grid.get(0))) {
+                        points.add(new PricePointResponse(
+                                        createdAt,
+                                        portfolio.getStartingBalance()));
+                }
+
+                for (int i = 0; i < grid.size() - 1; i++) {
+                        LocalDateTime time = grid.get(i);
+
+                        if (time.isBefore(createdAt)) {
+                                continue;
+                        }
+
+                        points.add(new PricePointResponse(
+                                        time,
+                                        valueAt(time, i, portfolio, transactions, cashEvents, prices)));
+                }
+
+                points.add(new PricePointResponse(
+                                now,
+                                buildPortfolioResponse(portfolio).getCurrentPortfolioValue()));
+
+                return new PriceHistoryResponse(range.getLabel(), points);
+        }
+
+        private BigDecimal valueAt(
+                        LocalDateTime time,
+                        int gridIndex,
+                        Portfolio portfolio,
+                        List<Transaction> transactions,
+                        List<PortfolioCashEvent> cashEvents,
+                        Map<String, List<PricePointResponse>> prices) {
+
+                BigDecimal cash = portfolio.getStartingBalance();
+                Map<String, BigDecimal> quantities = new HashMap<>();
+
+                for (Transaction transaction : transactions) {
+                        if (transaction.getExecutedAt().isAfter(time)) {
+                                break;
+                        }
+
+                        boolean isBuy = transaction.getTransactionType() == Transaction.TransactionType.BUY;
+                        String ticker = transaction.getAsset().getTicker();
+
+                        cash = isBuy
+                                        ? cash.subtract(transaction.getTotalAmount())
+                                        : cash.add(transaction.getTotalAmount());
+
+                        quantities.merge(
+                                        ticker,
+                                        isBuy ? transaction.getQuantity() : transaction.getQuantity().negate(),
+                                        BigDecimal::add);
+                }
+
+                for (PortfolioCashEvent event : cashEvents) {
+                        if (event.getCreatedAt().isAfter(time)) {
+                                break;
+                        }
+
+                        cash = event.getEventType() == PortfolioCashEvent.CashEventType.TRANSFER_OUT
+                                        ? cash.subtract(event.getAmount())
+                                        : cash.add(event.getAmount());
+                }
+
+                BigDecimal value = cash;
+
+                for (Map.Entry<String, BigDecimal> holding : quantities.entrySet()) {
+                        BigDecimal price = prices.get(holding.getKey()).get(gridIndex).getValue();
+                        value = value.add(holding.getValue().multiply(price));
+                }
+
+                return value.setScale(2, RoundingMode.HALF_UP);
+        }
+
         public List<TransactionResponse> getTransactions(
                         User user,
                         Long portfolioId) {
@@ -221,8 +346,10 @@ public class PortfolioService {
 
                 Asset asset = getAsset(request.getAssetId());
 
+                BigDecimal price = getMarketPrice(asset);
+
                 BigDecimal totalAmount = request.getQuantity()
-                                .multiply(request.getPrice())
+                                .multiply(price)
                                 .setScale(
                                                 2,
                                                 RoundingMode.HALF_UP);
@@ -246,7 +373,7 @@ public class PortfolioService {
                                         portfolio,
                                         asset,
                                         request.getQuantity(),
-                                        request.getPrice());
+                                        price);
 
                 } else {
 
@@ -256,7 +383,7 @@ public class PortfolioService {
 
                         BigDecimal newTotalCost = request.getQuantity()
                                         .multiply(
-                                                        request.getPrice());
+                                                        price);
 
                         BigDecimal newQuantity = holding.getQuantity()
                                         .add(request.getQuantity());
@@ -285,9 +412,18 @@ public class PortfolioService {
                                 asset,
                                 Transaction.TransactionType.BUY,
                                 request.getQuantity(),
-                                request.getPrice());
+                                price);
 
                 Transaction saved = transactionRepository.save(transaction);
+
+                notificationService.notifyTradeFilled(
+                                user,
+                                saved.getId(),
+                                true,
+                                asset.getTicker(),
+                                saved.getQuantity(),
+                                saved.getPrice(),
+                                saved.getTotalAmount());
 
                 return new TransactionResponse(saved);
         }
@@ -320,8 +456,10 @@ public class PortfolioService {
                                         "Insufficient asset quantity");
                 }
 
+                BigDecimal price = getMarketPrice(asset);
+
                 BigDecimal totalAmount = request.getQuantity()
-                                .multiply(request.getPrice())
+                                .multiply(price)
                                 .setScale(
                                                 2,
                                                 RoundingMode.HALF_UP);
@@ -353,9 +491,18 @@ public class PortfolioService {
                                 asset,
                                 Transaction.TransactionType.SELL,
                                 request.getQuantity(),
-                                request.getPrice());
+                                price);
 
                 Transaction saved = transactionRepository.save(transaction);
+
+                notificationService.notifyTradeFilled(
+                                user,
+                                saved.getId(),
+                                false,
+                                asset.getTicker(),
+                                saved.getQuantity(),
+                                saved.getPrice(),
+                                saved.getTotalAmount());
 
                 return new TransactionResponse(saved);
         }
@@ -368,7 +515,7 @@ public class PortfolioService {
                                 .findByIdAndUserId(
                                                 portfolioId,
                                                 userId)
-                                .orElseThrow(() -> new IllegalArgumentException(
+                                .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Portfolio not found"));
         }
 
@@ -376,7 +523,7 @@ public class PortfolioService {
 
                 return assetRepository
                                 .findById(assetId)
-                                .orElseThrow(() -> new IllegalArgumentException(
+                                .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Asset not found"));
         }
 
@@ -395,14 +542,24 @@ public class PortfolioService {
                         throw new IllegalArgumentException(
                                         "Quantity must be greater than zero");
                 }
+        }
 
-                if (request.getPrice() == null
-                                || request.getPrice()
-                                                .compareTo(BigDecimal.ZERO) <= 0) {
+        // Trades always execute at the server's market price so a client
+        // can't choose its own price.
+        private BigDecimal getMarketPrice(Asset asset) {
+
+                BigDecimal price = marketPriceService
+                                .getCurrentPrice(asset.getTicker());
+
+                if (price == null
+                                || price.compareTo(BigDecimal.ZERO) <= 0) {
 
                         throw new IllegalArgumentException(
-                                        "Price must be greater than zero");
+                                        "No market price available for "
+                                                        + asset.getTicker());
                 }
+
+                return price;
         }
 
         @Transactional
@@ -473,6 +630,13 @@ public class PortfolioService {
 
                 cashEventRepository.save(transferOut);
                 cashEventRepository.save(transferIn);
+
+                notificationService.notifyCashTransfer(
+                                user,
+                                destination.getId(),
+                                amount,
+                                source.getName(),
+                                destination.getName());
         }
 
         @Transactional

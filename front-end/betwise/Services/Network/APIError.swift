@@ -5,8 +5,9 @@ import Foundation
 enum APIError: LocalizedError {
     case invalidURL
     case invalidResponse
-    case unauthorized
-    case server(Int)
+    case notSignedIn
+    case forbidden
+    case server(statusCode: Int, message: String?)
     case decoding(Error)
 
     var errorDescription: String? {
@@ -17,11 +18,14 @@ enum APIError: LocalizedError {
         case .invalidResponse:
             return "Invalid response from the server."
 
-        case .unauthorized:
+        case .notSignedIn:
             return "You are not signed in."
 
-        case .server(let code):
-            return "Server returned status code \(code)."
+        case .forbidden:
+            return "You don't have permission to do that."
+
+        case .server(let statusCode, let message):
+            return message ?? "Server returned status code \(statusCode)."
 
         case .decoding(let error):
             return "Could not read server response: \(error.localizedDescription)"

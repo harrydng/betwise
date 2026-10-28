@@ -12,4 +12,8 @@ public interface LessonProgressRepository
     Optional<LessonProgress> findByUserIdAndLessonId(
             Long userId,
             Long lessonId);
+
+    void deleteByUserId(Long userId);
+
+    long countByLessonId(Long lessonId);
 }

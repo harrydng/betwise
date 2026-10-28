@@ -1,10 +1,12 @@
 package com.betwise.service;
 
+import com.betwise.exception.ResourceNotFoundException;
 import com.betwise.dto.*;
 import com.betwise.model.Lesson;
 import com.betwise.model.LessonProgress;
 import com.betwise.model.User;
 
+import com.betwise.repository.LessonCheckpointRepository;
 import com.betwise.repository.LessonProgressRepository;
 import com.betwise.repository.LessonRepository;
 
@@ -19,24 +21,32 @@ public class LessonService {
 
     private final LessonRepository lessonRepository;
     private final LessonProgressRepository lessonProgressRepository;
+    private final LessonCheckpointRepository checkpointRepository;
     private final PortfolioService portfolioService;
+    private final NotificationService notificationService;
 
     public LessonService(
             LessonRepository lessonRepository,
             LessonProgressRepository lessonProgressRepository,
-            PortfolioService portfolioService) {
+            LessonCheckpointRepository checkpointRepository,
+            PortfolioService portfolioService,
+            NotificationService notificationService) {
 
         this.lessonRepository = lessonRepository;
         this.lessonProgressRepository = lessonProgressRepository;
+        this.checkpointRepository = checkpointRepository;
         this.portfolioService = portfolioService;
+        this.notificationService = notificationService;
     }
+
+    // MARK: - Browsing (only published, non-archived lessons)
 
     public List<LessonResponse> getLessons() {
 
         return lessonRepository
-                .findAll()
+                .findByPublishedTrueAndArchivedFalseOrderByPositionAscIdAsc()
                 .stream()
-                .map(LessonResponse::new)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -44,16 +54,15 @@ public class LessonService {
             String category) {
 
         return lessonRepository
-                .findByCategorySlugIgnoreCase(category)
+                .findByCategorySlugIgnoreCaseAndPublishedTrueAndArchivedFalseOrderByPositionAscIdAsc(category)
                 .stream()
-                .map(LessonResponse::new)
+                .map(this::toResponse)
                 .toList();
     }
 
     public LessonResponse getLesson(Long lessonId) {
 
-        return new LessonResponse(
-                getLessonEntity(lessonId));
+        return toResponse(getLiveLesson(lessonId));
     }
 
     public List<LessonResponse> searchLessons(
@@ -65,10 +74,35 @@ public class LessonService {
         }
 
         return lessonRepository
-                .findByTitleContainingIgnoreCase(
+                .findByTitleContainingIgnoreCaseAndPublishedTrueAndArchivedFalseOrderByPositionAscIdAsc(
                         query.trim())
                 .stream()
-                .map(LessonResponse::new)
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * The lesson's sections, in reading order. Still available for archived
+     * lessons a user has already started, so they can finish them.
+     */
+    public List<LessonCheckpointResponse> getCheckpoints(
+            User user,
+            Long lessonId) {
+
+        Lesson lesson = getLessonEntity(lessonId);
+
+        boolean hasStarted = lessonProgressRepository
+                .findByUserIdAndLessonId(user.getId(), lessonId)
+                .isPresent();
+
+        if (!lesson.isLive() && !hasStarted) {
+            throw new ResourceNotFoundException("Lesson not found");
+        }
+
+        return checkpointRepository
+                .findByLessonIdOrderByPositionAsc(lessonId)
+                .stream()
+                .map(LessonCheckpointResponse::new)
                 .toList();
     }
 
@@ -77,7 +111,7 @@ public class LessonService {
             User user,
             Long lessonId) {
 
-        Lesson lesson = getLessonEntity(lessonId);
+        Lesson lesson = getLiveLesson(lessonId);
 
         LessonProgress progress = lessonProgressRepository
                 .findByUserIdAndLessonId(
@@ -148,6 +182,14 @@ public class LessonService {
                         "Completed checkpoints cannot be negative");
             }
 
+            long checkpointCount = checkpointRepository.countByLessonId(lessonId);
+
+            if (checkpointCount > 0
+                    && request.getCompletedCheckpoints() > checkpointCount) {
+                throw new IllegalArgumentException(
+                        "This lesson only has " + checkpointCount + " checkpoints");
+            }
+
             progress.setCompletedCheckpoints(
                     request.getCompletedCheckpoints());
         }
@@ -189,6 +231,12 @@ public class LessonService {
                 portfolioId,
                 lesson.getCashReward());
 
+        notificationService.notifyLessonReward(
+                user,
+                lesson.getId(),
+                lesson.getTitle(),
+                lesson.getCashReward());
+
         return new LessonProgressResponse(saved);
     }
 
@@ -197,7 +245,27 @@ public class LessonService {
 
         return lessonRepository
                 .findById(lessonId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Lesson not found"));
+    }
+
+    /** Drafts and archived lessons look like they don't exist to app users. */
+    private Lesson getLiveLesson(
+            Long lessonId) {
+
+        Lesson lesson = getLessonEntity(lessonId);
+
+        if (!lesson.isLive()) {
+            throw new ResourceNotFoundException("Lesson not found");
+        }
+
+        return lesson;
+    }
+
+    private LessonResponse toResponse(Lesson lesson) {
+
+        return new LessonResponse(
+                lesson,
+                checkpointRepository.countByLessonId(lesson.getId()));
     }
 }

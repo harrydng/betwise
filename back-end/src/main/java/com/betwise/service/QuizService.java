@@ -1,5 +1,7 @@
 package com.betwise.service;
 
+import com.betwise.exception.ConflictException;
+import com.betwise.exception.ResourceNotFoundException;
 import com.betwise.dto.*;
 import com.betwise.model.*;
 
@@ -24,12 +26,17 @@ public class QuizService {
 
     private final LessonProgressRepository lessonProgressRepository;
 
+    private final NotificationService notificationService;
+
     public QuizService(
             QuizRepository quizRepository,
             QuizQuestionRepository quizQuestionRepository,
             QuizProgressRepository quizProgressRepository,
             QuizAnswerRepository quizAnswerRepository,
-            LessonProgressRepository lessonProgressRepository) {
+            LessonProgressRepository lessonProgressRepository,
+            NotificationService notificationService) {
+
+        this.notificationService = notificationService;
 
         this.quizRepository = quizRepository;
         this.quizQuestionRepository = quizQuestionRepository;
@@ -56,6 +63,8 @@ public class QuizService {
                 .findByTitleContainingIgnoreCase(
                         query.trim())
                 .stream()
+                // Quizzes for draft or archived lessons stay out of search.
+                .filter(quiz -> quiz.getLesson().isLive())
                 .map(quiz -> buildSummary(
                         user,
                         quiz))
@@ -138,14 +147,14 @@ public class QuizService {
                         "Quiz has not been started"));
 
         if (progress.isCompleted()) {
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     "Quiz is already completed");
         }
 
         QuizQuestion question = quizQuestionRepository
                 .findById(
                         request.getQuestionId())
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Quiz question not found"));
 
         if (!question.getQuiz()
@@ -168,7 +177,7 @@ public class QuizService {
                         user.getId(),
                         question.getId())) {
 
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     "Question has already been answered");
         }
 
@@ -261,6 +270,12 @@ public class QuizService {
         QuizProgress saved = quizProgressRepository
                 .save(progress);
 
+        notificationService.notifyQuizCompleted(
+                user,
+                saved.getQuiz().getId(),
+                saved.getQuiz().getTitle(),
+                score);
+
         return new QuizProgressResponse(saved);
     }
 
@@ -290,7 +305,7 @@ public class QuizService {
 
         return quizRepository
                 .findById(quizId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Quiz not found"));
     }
 

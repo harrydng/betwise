@@ -19,7 +19,13 @@ public class LessonResponse {
 
     private BigDecimal cashReward;
 
-    public LessonResponse(Lesson lesson) {
+    private int position;
+    private long checkpointCount;
+
+    public LessonResponse(Lesson lesson, long checkpointCount) {
+
+        this.position = lesson.getPosition();
+        this.checkpointCount = checkpointCount;
 
         this.id = lesson.getId();
 
@@ -69,5 +75,14 @@ public class LessonResponse {
 
     public BigDecimal getCashReward() {
         return cashReward;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    /** How many sections the lesson has; progress counts up to this. */
+    public long getCheckpointCount() {
+        return checkpointCount;
     }
 }

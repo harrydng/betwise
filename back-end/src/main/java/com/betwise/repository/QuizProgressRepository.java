@@ -12,4 +12,8 @@ public interface QuizProgressRepository
     Optional<QuizProgress> findByUserIdAndQuizId(
             Long userId,
             Long quizId);
+
+    void deleteByUserId(Long userId);
+
+    boolean existsByQuizId(Long quizId);
 }

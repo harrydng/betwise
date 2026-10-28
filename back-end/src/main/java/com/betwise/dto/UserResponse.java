@@ -15,6 +15,7 @@ public class UserResponse {
     private User.ExperienceLevel experienceLevel;
     private User.InvestmentGoal investmentGoal;
     private User.RiskTolerance riskTolerance;
+    private User.Role role;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -27,6 +28,7 @@ public class UserResponse {
         this.experienceLevel = user.getExperienceLevel();
         this.investmentGoal = user.getInvestmentGoal();
         this.riskTolerance = user.getRiskTolerance();
+        this.role = user.getRole();
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
     }
@@ -57,6 +59,10 @@ public class UserResponse {
 
     public User.RiskTolerance getRiskTolerance() {
         return riskTolerance;
+    }
+
+    public User.Role getRole() {
+        return role;
     }
 
     public LocalDateTime getCreatedAt() {

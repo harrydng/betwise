@@ -21,4 +21,10 @@ public interface QuizAnswerRepository
     boolean existsByUserIdAndQuizQuestionId(
             Long userId,
             Long quizQuestionId);
+
+    void deleteByUserId(Long userId);
+
+    boolean existsByQuizQuestionId(Long quizQuestionId);
+
+    boolean existsByQuizQuestionQuizId(Long quizId);
 }

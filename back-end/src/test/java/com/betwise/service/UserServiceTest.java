@@ -1,5 +1,7 @@
 package com.betwise.service;
 
+import com.betwise.exception.ConflictException;
+import com.betwise.exception.ResourceNotFoundException;
 import com.betwise.dto.CreateUserRequest;
 import com.betwise.dto.UpdatePasswordRequest;
 import com.betwise.dto.UpdateUserRequest;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,6 +37,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AccountCleanupService accountCleanupService;
 
     @InjectMocks
     private UserService userService;
@@ -100,7 +106,7 @@ class UserServiceTest {
                 "harry@gmail.com")).thenReturn(true);
 
         assertThrows(
-                IllegalArgumentException.class,
+                ConflictException.class,
                 () -> userService.createUser(request));
 
         verify(userRepository, never())
@@ -126,7 +132,7 @@ class UserServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                IllegalArgumentException.class,
+                ResourceNotFoundException.class,
                 () -> userService.getUser(99L));
     }
 
@@ -219,7 +225,12 @@ class UserServiceTest {
 
         userService.deleteUser(1L);
 
-        verify(userRepository)
+        // Owned rows must go before the user, or foreign keys block it.
+        InOrder order = inOrder(accountCleanupService, userRepository);
+
+        order.verify(accountCleanupService)
+                .deleteEverythingOwnedBy(1L);
+        order.verify(userRepository)
                 .deleteById(1L);
     }
 
@@ -230,7 +241,7 @@ class UserServiceTest {
                 .thenReturn(false);
 
         assertThrows(
-                IllegalArgumentException.class,
+                ResourceNotFoundException.class,
                 () -> userService.deleteUser(99L));
 
         verify(userRepository, never())
@@ -334,8 +345,8 @@ class UserServiceTest {
         when(userRepository.findByEmail("missing@gmail.com"))
                 .thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
                 () -> userService.getUserByEmail(
                         " MISSING@GMAIL.COM "));
 
@@ -354,8 +365,8 @@ class UserServiceTest {
         when(userRepository.findById(99L))
                 .thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
                 () -> userService.updateUser(
                         99L,
                         request));
@@ -379,8 +390,8 @@ class UserServiceTest {
         when(userRepository.findById(99L))
                 .thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
                 () -> userService.updatePassword(
                         99L,
                         request));

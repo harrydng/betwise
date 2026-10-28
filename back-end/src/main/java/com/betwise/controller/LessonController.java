@@ -60,6 +60,19 @@ public class LessonController {
                 lessonService.getLesson(id));
     }
 
+    @GetMapping("/{id}/checkpoints")
+    public ResponseEntity<List<LessonCheckpointResponse>> getCheckpoints(
+            Authentication authentication,
+            @PathVariable Long id) {
+
+        User user = (User) authentication.getPrincipal();
+
+        return ResponseEntity.ok(
+                lessonService.getCheckpoints(
+                        user,
+                        id));
+    }
+
     @PostMapping("/{id}/start")
     public ResponseEntity<LessonProgressResponse> startLesson(
             Authentication authentication,

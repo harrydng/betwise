@@ -1,5 +1,6 @@
 package com.betwise.service;
 
+import com.betwise.exception.AuthenticationFailedException;
 import com.betwise.dto.LoginRequest;
 import com.betwise.dto.LoginResponse;
 import com.betwise.dto.RefreshTokenRequest;
@@ -35,7 +36,7 @@ public class AuthService {
                 .trim();
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new AuthenticationFailedException(
                         "Invalid email or password"));
 
         boolean passwordMatches = passwordEncoder.matches(
@@ -43,7 +44,7 @@ public class AuthService {
                 user.getPasswordHash());
 
         if (!passwordMatches) {
-            throw new IllegalArgumentException(
+            throw new AuthenticationFailedException(
                     "Invalid email or password");
         }
 
@@ -63,14 +64,14 @@ public class AuthService {
         String refreshToken = request.getRefreshToken();
 
         if (!jwtService.isRefreshTokenValid(refreshToken)) {
-            throw new IllegalArgumentException(
+            throw new AuthenticationFailedException(
                     "Invalid or expired refresh token");
         }
 
         Long userId = jwtService.extractUserIdFromRefreshToken(refreshToken);
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new AuthenticationFailedException("Invalid or expired refresh token"));
 
         String newAccessToken = jwtService.generateAccessToken(user);
 

@@ -10,4 +10,6 @@ public interface LessonCategoryRepository
         extends JpaRepository<LessonCategory, Long> {
 
     Optional<LessonCategory> findBySlugIgnoreCase(String slug);
+
+    boolean existsBySlugIgnoreCase(String slug);
 }

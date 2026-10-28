@@ -9,13 +9,19 @@ final class AuthService {
 
     private init() {}
 
+    var isSignedIn: Bool {
+        api.isSignedIn
+    }
+
+    /// Logs in and stores both tokens. Access tokens refresh automatically
+    /// from then on; see `APIClient`.
     func login(
         email: String,
         password: String
-    ) async throws -> LoginResponse {
+    ) async throws -> User {
         let response: LoginResponse = try await api.request(
-            path: "/api/auth/login",
-            method: "POST",
+            .post,
+            "/api/auth/login",
             body: LoginRequest(
                 email: email,
                 password: password
@@ -24,33 +30,23 @@ final class AuthService {
         )
 
         api.saveTokens(
-            accessToken: response.bearerToken,
+            accessToken: response.accessToken,
             refreshToken: response.refreshToken
         )
 
-        return response
+        return response.user
     }
 
-    func refreshAccessToken() async throws -> LoginResponse {
-        guard let refreshToken = api.getRefreshToken() else {
-            throw APIError.unauthorized
-        }
+    /// Creates an account, then logs in with it.
+    func signUp(
+        _ request: CreateUserRequest
+    ) async throws -> User {
+        _ = try await UserService.shared.createUser(request)
 
-        let response: LoginResponse = try await api.request(
-            path: "/api/auth/refresh",
-            method: "POST",
-            body: RefreshRequest(
-                refreshToken: refreshToken
-            ),
-            authenticated: false
+        return try await login(
+            email: request.email,
+            password: request.password
         )
-
-        api.saveTokens(
-            accessToken: response.bearerToken,
-            refreshToken: response.refreshToken
-        )
-
-        return response
     }
 
     func logout() {

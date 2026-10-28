@@ -30,6 +30,11 @@ public class User {
         SHORT_TERM_GROWTH
     }
 
+    public enum Role {
+        USER,
+        ADMIN
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -58,6 +63,12 @@ public class User {
     @Column(name = "investment_goal", length = 50)
     private InvestmentGoal investmentGoal;
 
+    // The column default fills in existing rows when Hibernate adds the
+    // column to a database created before roles existed.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) not null default 'USER'")
+    private Role role = Role.USER;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -65,6 +76,18 @@ public class User {
     private LocalDateTime updatedAt;
 
     public User() {
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public boolean isAdmin() {
+        return role == Role.ADMIN;
     }
 
     public User(

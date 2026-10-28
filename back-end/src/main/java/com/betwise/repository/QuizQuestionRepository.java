@@ -11,4 +11,6 @@ public interface QuizQuestionRepository
 
     List<QuizQuestion> findByQuizIdOrderByQuestionOrderAsc(
             Long quizId);
+
+    long countByQuizId(Long quizId);
 }

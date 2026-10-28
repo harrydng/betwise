@@ -2,8 +2,10 @@
 
 import Foundation
 
-struct Watchlist: Codable, Identifiable {
+struct Watchlist: Codable, Identifiable, Hashable {
     let id: Int
     let name: String
-    let items: [WatchlistItem]?
+    let createdAt: Date
+    let updatedAt: Date
+    let items: [WatchlistItem]
 }

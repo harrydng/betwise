@@ -11,20 +11,8 @@ final class WatchlistService {
 
     func getWatchlists() async throws -> [Watchlist] {
         try await api.request(
-            path: "/api/watchlists",
-            method: "GET"
-        )
-    }
-
-    func createWatchlist(
-        name: String
-    ) async throws -> Watchlist {
-        try await api.request(
-            path: "/api/watchlists",
-            method: "POST",
-            body: CreateWatchlistRequest(
-                name: name
-            )
+            .get,
+            "/api/watchlists"
         )
     }
 
@@ -32,40 +20,66 @@ final class WatchlistService {
         id: Int
     ) async throws -> Watchlist {
         try await api.request(
-            path: "/api/watchlists/\(id)",
-            method: "GET"
+            .get,
+            "/api/watchlists/\(id)"
+        )
+    }
+
+    func createWatchlist(
+        name: String
+    ) async throws -> Watchlist {
+        try await api.request(
+            .post,
+            "/api/watchlists",
+            body: CreateWatchlistRequest(
+                name: name
+            )
+        )
+    }
+
+    func renameWatchlist(
+        id: Int,
+        name: String
+    ) async throws -> Watchlist {
+        try await api.request(
+            .patch,
+            "/api/watchlists/\(id)",
+            body: UpdateWatchlistRequest(
+                name: name
+            )
         )
     }
 
     func deleteWatchlist(
         id: Int
     ) async throws {
-        let _: EmptyResponse = try await api.request(
-            path: "/api/watchlists/\(id)",
-            method: "DELETE"
+        try await api.perform(
+            .delete,
+            "/api/watchlists/\(id)"
         )
     }
 
+    /// Returns the whole updated watchlist, not just the new item.
     func addItem(
         watchlistId: Int,
-        symbol: String
-    ) async throws -> WatchlistItem {
+        assetId: Int
+    ) async throws -> Watchlist {
         try await api.request(
-            path: "/api/watchlists/\(watchlistId)/items",
-            method: "POST",
+            .post,
+            "/api/watchlists/\(watchlistId)/items",
             body: AddWatchlistItemRequest(
-                symbol: symbol
+                assetId: assetId
             )
         )
     }
 
-    func deleteItem(
+    func removeItem(
         watchlistId: Int,
         itemId: Int
     ) async throws {
-        let _: EmptyResponse = try await api.request(
-            path: "/api/watchlists/\(watchlistId)/items/\(itemId)",
-            method: "DELETE"
+        try await api.perform(
+            .delete,
+            "/api/watchlists/\(watchlistId)/items/\(itemId)"
         )
     }
 }

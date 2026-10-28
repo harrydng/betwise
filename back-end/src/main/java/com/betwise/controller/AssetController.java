@@ -1,6 +1,7 @@
 package com.betwise.controller;
 
 import com.betwise.dto.AssetResponse;
+import com.betwise.dto.PriceHistoryResponse;
 import com.betwise.service.AssetService;
 
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,16 @@ public class AssetController {
 
         return ResponseEntity.ok(
                 assetService.searchAssets(query)
+        );
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<PriceHistoryResponse> getHistory(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1D") String range) {
+
+        return ResponseEntity.ok(
+                assetService.getHistory(id, range)
         );
     }
 }

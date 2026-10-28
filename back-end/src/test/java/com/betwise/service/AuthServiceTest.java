@@ -1,5 +1,6 @@
 package com.betwise.service;
 
+import com.betwise.exception.AuthenticationFailedException;
 import com.betwise.dto.LoginRequest;
 import com.betwise.dto.LoginResponse;
 import com.betwise.dto.RefreshTokenRequest;
@@ -101,8 +102,8 @@ class AuthServiceTest {
         when(userRepository.findByEmail("wrong@gmail.com"))
                 .thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        AuthenticationFailedException exception = assertThrows(
+                AuthenticationFailedException.class,
                 () -> authService.login(request));
 
         assertEquals(
@@ -129,7 +130,7 @@ class AuthServiceTest {
                 "hashed-password")).thenReturn(false);
 
         assertThrows(
-                IllegalArgumentException.class,
+                AuthenticationFailedException.class,
                 () -> authService.login(request));
 
         verify(jwtService, never())
@@ -176,7 +177,7 @@ class AuthServiceTest {
                 .thenReturn(false);
 
         assertThrows(
-                IllegalArgumentException.class,
+                AuthenticationFailedException.class,
                 () -> authService.refreshToken(request));
 
         verify(userRepository, never())
@@ -199,12 +200,12 @@ class AuthServiceTest {
         when(userRepository.findById(99L))
                 .thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        AuthenticationFailedException exception = assertThrows(
+                AuthenticationFailedException.class,
                 () -> authService.refreshToken(request));
 
         assertEquals(
-                "User not found",
+                "Invalid or expired refresh token",
                 exception.getMessage());
 
         verify(jwtService, never())

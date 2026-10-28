@@ -14,4 +14,6 @@ public interface QuizRepository
 
     List<Quiz> findByLessonIdOrderByCheckpointOrderAsc(
             Long lessonId);
+
+    long countByLessonId(Long lessonId);
 }

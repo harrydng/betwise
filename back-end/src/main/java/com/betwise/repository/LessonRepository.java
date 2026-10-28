@@ -9,14 +9,19 @@ import java.util.List;
 public interface LessonRepository
         extends JpaRepository<Lesson, Long> {
 
-    List<Lesson> findByTitleContainingIgnoreCase(
-            String title);
+    // MARK: - App (published and not archived)
 
-    List<Lesson> findByCategorySlugIgnoreCase(
+    List<Lesson> findByPublishedTrueAndArchivedFalseOrderByPositionAscIdAsc();
+
+    List<Lesson> findByCategorySlugIgnoreCaseAndPublishedTrueAndArchivedFalseOrderByPositionAscIdAsc(
             String slug);
 
-    List<Lesson>
-            findByCategorySlugIgnoreCaseAndTitleContainingIgnoreCase(
-                    String slug,
-                    String title);
+    List<Lesson> findByTitleContainingIgnoreCaseAndPublishedTrueAndArchivedFalseOrderByPositionAscIdAsc(
+            String title);
+
+    // MARK: - Admin (everything, including drafts and archived lessons)
+
+    List<Lesson> findAllByOrderByPositionAscIdAsc();
+
+    long countByCategoryId(Long categoryId);
 }

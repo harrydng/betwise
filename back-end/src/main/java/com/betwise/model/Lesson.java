@@ -51,6 +51,20 @@ public class Lesson {
     @Column(name = "cash_reward", nullable = false, precision = 15, scale = 2)
     private BigDecimal cashReward;
 
+    // Drafts are only visible in the admin app. Lessons that existed before
+    // this column was added default to published so they stay visible.
+    @Column(nullable = false, columnDefinition = "boolean not null default true")
+    private boolean published = false;
+
+    // Archived lessons are hidden from the app but kept, because users'
+    // progress and rewards still reference them.
+    @Column(nullable = false, columnDefinition = "boolean not null default false")
+    private boolean archived = false;
+
+    // Display order within the app, lowest first.
+    @Column(nullable = false, columnDefinition = "int not null default 0")
+    private int position = 0;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -69,6 +83,35 @@ public class Lesson {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isPublished() {
+        return published;
+    }
+
+    public void setPublished(boolean published) {
+        this.published = published;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public void setArchived(boolean archived) {
+        this.archived = archived;
+    }
+
+    /** Visible to app users: published and not archived. */
+    public boolean isLive() {
+        return published && !archived;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
     }
 
     public LessonCategory getCategory() {

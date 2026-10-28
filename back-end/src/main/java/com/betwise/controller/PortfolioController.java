@@ -120,6 +120,21 @@ public class PortfolioController {
                         id));
     }
 
+    @GetMapping("/{id}/history")
+    public ResponseEntity<PriceHistoryResponse> getHistory(
+            Authentication authentication,
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1M") String range) {
+
+        User user = (User) authentication.getPrincipal();
+
+        return ResponseEntity.ok(
+                portfolioService.getPortfolioHistory(
+                        user,
+                        id,
+                        range));
+    }
+
     @PostMapping("/{id}/buy")
     public ResponseEntity<TransactionResponse> buy(
             Authentication authentication,
