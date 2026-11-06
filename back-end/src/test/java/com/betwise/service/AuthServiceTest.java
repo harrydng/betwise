@@ -8,6 +8,8 @@ import com.betwise.dto.RefreshTokenResponse;
 import com.betwise.model.User;
 import com.betwise.repository.UserRepository;
 import com.betwise.security.JwtService;
+import com.betwise.security.LoginAttemptLimiter;
+import com.betwise.security.google.GoogleIdTokenVerifier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,12 @@ class AuthServiceTest {
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private GoogleIdTokenVerifier googleVerifier;
+
+    @Mock
+    private LoginAttemptLimiter attemptLimiter;
 
     @InjectMocks
     private AuthService authService;
@@ -110,8 +118,10 @@ class AuthServiceTest {
                 "Invalid email or password",
                 exception.getMessage());
 
-        verify(passwordEncoder, never())
-                .matches(anyString(), anyString());
+        // The password is still checked (against a placeholder hash) so a
+        // missing account takes as long to reject as a wrong password.
+        verify(passwordEncoder).matches(eq("password"), any());
+        verify(attemptLimiter).recordFailure("wrong@gmail.com");
     }
 
     @Test

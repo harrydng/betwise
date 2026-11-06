@@ -5,6 +5,7 @@ struct WelcomeView: View {
     let session: SessionModel
 
     @State private var presentedSheet: AuthSheet?
+    @State private var errorMessage: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -15,10 +16,17 @@ struct WelcomeView: View {
             Spacer()
 
             WelcomeHighlights()
-                .padding(.bottom, 36)
+                .padding(.bottom, 28)
 
             VStack(spacing: 12) {
-                PrimaryButton(title: "Create account") {
+                FormError(message: errorMessage)
+
+                GoogleSignInButton(session: session) { message in
+                    withAnimation { errorMessage = message }
+                }
+
+                PrimaryButton(title: "Create account with email") {
+                    errorMessage = nil
                     presentedSheet = .signUp
                 }
 

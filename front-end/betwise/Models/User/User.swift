@@ -13,6 +13,12 @@ struct User: Codable, Identifiable, Hashable {
     let createdAt: Date
     let updatedAt: Date
 
+    /// False for accounts created with Google that haven't set a password.
+    var hasPassword: Bool?
+
+    /// True once the account can sign in with Google.
+    var googleLinked: Bool?
+
     enum ExperienceLevel: String, Codable, CaseIterable {
         case beginner = "BEGINNER"
         case intermediate = "INTERMEDIATE"

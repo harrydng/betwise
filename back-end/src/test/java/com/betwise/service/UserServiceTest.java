@@ -101,6 +101,8 @@ class UserServiceTest {
         CreateUserRequest request = new CreateUserRequest();
 
         request.setEmail("harry@gmail.com");
+        request.setName("Harry");
+        request.setPassword("password123");
 
         when(userRepository.existsByEmail(
                 "harry@gmail.com")).thenReturn(true);
@@ -215,6 +217,58 @@ class UserServiceTest {
 
         verify(userRepository, never())
                 .save(any());
+    }
+
+    @Test
+    void createUserShouldRejectAShortPassword() {
+
+        CreateUserRequest request = new CreateUserRequest();
+
+        request.setName("Harry");
+        request.setEmail("harry@gmail.com");
+        request.setPassword("short");
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.createUser(request));
+
+        assertEquals("Password must be at least 8 characters", error.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUserShouldRejectAnInvalidEmail() {
+
+        CreateUserRequest request = new CreateUserRequest();
+
+        request.setName("Harry");
+        request.setEmail("not-an-email");
+        request.setPassword("password123");
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.createUser(request));
+    }
+
+    @Test
+    void googleOnlyUserCanSetAPasswordWithoutACurrentOne() {
+
+        user.setPasswordHash(null);
+
+        UpdatePasswordRequest request = new UpdatePasswordRequest();
+
+        request.setNewPassword("brand-new-password");
+
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.encode("brand-new-password"))
+                .thenReturn("new-hash");
+
+        userService.updatePassword(1L, request);
+
+        assertEquals("new-hash", user.getPasswordHash());
+        verify(passwordEncoder, never()).matches(any(), any());
     }
 
     @Test

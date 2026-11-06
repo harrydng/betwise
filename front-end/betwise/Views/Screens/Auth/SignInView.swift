@@ -20,6 +20,12 @@ struct SignInView: View {
                         .font(.largeTitle.weight(.bold))
                         .foregroundStyle(AppColors.textPrimary)
 
+                    GoogleSignInButton(session: session) { message in
+                        withAnimation { errorMessage = message }
+                    }
+
+                    OrDivider()
+
                     FormField(title: "Email", text: $email, kind: .email, prompt: "you@example.com")
                     FormField(title: "Password", text: $password, kind: .password)
 

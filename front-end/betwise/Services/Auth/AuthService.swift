@@ -37,6 +37,29 @@ final class AuthService {
         return response.user
     }
 
+    /// Exchanges a Google sign-in for Betwise tokens. The backend verifies
+    /// the ID token with Google and creates the account on first use.
+    func loginWithGoogle(
+        _ authorization: GoogleAuthorization
+    ) async throws -> User {
+        let response: LoginResponse = try await api.request(
+            .post,
+            "/api/auth/google",
+            body: GoogleLoginRequest(
+                idToken: authorization.idToken,
+                nonce: authorization.nonce
+            ),
+            authenticated: false
+        )
+
+        api.saveTokens(
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken
+        )
+
+        return response.user
+    }
+
     /// Creates an account, then logs in with it.
     func signUp(
         _ request: CreateUserRequest

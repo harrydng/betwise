@@ -1,5 +1,6 @@
 package com.betwise.controller;
 
+import com.betwise.dto.GoogleLoginRequest;
 import com.betwise.dto.LoginRequest;
 import com.betwise.dto.LoginResponse;
 import com.betwise.dto.RefreshTokenRequest;
@@ -24,6 +25,15 @@ public class AuthController {
             @RequestBody LoginRequest request) {
 
         LoginResponse response = authService.login(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<LoginResponse> loginWithGoogle(
+            @RequestBody GoogleLoginRequest request) {
+
+        LoginResponse response = authService.loginWithGoogle(request);
 
         return ResponseEntity.ok(response);
     }

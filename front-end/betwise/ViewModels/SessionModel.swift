@@ -32,6 +32,14 @@ final class SessionModel {
         state = .signedIn
     }
 
+    /// Signs in or creates an account with Google. `authenticate` shows
+    /// the system sign-in sheet; views pass `webAuthenticationSession`.
+    func signInWithGoogle(using authenticate: @escaping GoogleSignIn.Authenticate) async throws {
+        let authorization = try await GoogleSignIn.authorize(using: authenticate)
+        user = try await AuthService.shared.loginWithGoogle(authorization)
+        state = .signedIn
+    }
+
     func continueAsGuest() {
         state = .guest
     }
@@ -64,6 +72,9 @@ final class SessionModel {
 
     func changePassword(current: String, new: String) async throws {
         try await UserService.shared.changePassword(currentPassword: current, newPassword: new)
+
+        // A Google-only account just gained a password; refresh `hasPassword`.
+        await loadUser()
     }
 
     func deleteAccount() async throws {

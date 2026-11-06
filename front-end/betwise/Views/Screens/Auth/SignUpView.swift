@@ -34,6 +34,12 @@ struct SignUpView: View {
                             .foregroundStyle(AppColors.textSecondary)
                     }
 
+                    GoogleSignInButton(session: session) { message in
+                        withAnimation { errorMessage = message }
+                    }
+
+                    OrDivider()
+
                     FormField(title: "Name", text: $name, kind: .name, prompt: "Your name")
                     FormField(title: "Email", text: $email, kind: .email, prompt: "you@example.com")
 

@@ -15,13 +15,22 @@ struct ChangePasswordView: View {
     private static let minimumPasswordLength = 8
 
     var body: some View {
+        // Accounts created with Google don't have a password to confirm.
+        let needsCurrentPassword = session.user?.hasPassword != false
         let isLongEnough = newPassword.count >= Self.minimumPasswordLength
         let matches = !confirmation.isEmpty && confirmation == newPassword
-        let canSave = !currentPassword.isEmpty && isLongEnough && matches && !isSaving
+        let canSave = (!needsCurrentPassword || !currentPassword.isEmpty) && isLongEnough && matches && !isSaving
 
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                FormField(title: "Current password", text: $currentPassword, kind: .password)
+                if needsCurrentPassword {
+                    FormField(title: "Current password", text: $currentPassword, kind: .password)
+                } else {
+                    Text("You sign in with Google. Add a password to also sign in with your email.")
+                        .font(.subheadline)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 VStack(alignment: .leading, spacing: 6) {
                     FormField(title: "New password", text: $newPassword, kind: .newPassword)
@@ -61,7 +70,7 @@ struct ChangePasswordView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .screenBackground()
-        .navigationTitle("Change password")
+        .navigationTitle(session.user?.hasPassword == false ? "Set password" : "Change password")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

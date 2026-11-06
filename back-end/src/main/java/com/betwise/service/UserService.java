@@ -36,7 +36,9 @@ public class UserService {
      * @return
      */
     public UserResponse createUser(CreateUserRequest request) {
-        String email = request.getEmail().toLowerCase().trim();
+        String name = validName(request.getName());
+        String email = validEmail(request.getEmail());
+        validatePassword(request.getPassword());
 
         if (userRepository.existsByEmail(email)) {
             throw new ConflictException("Email is already in use");
@@ -44,8 +46,8 @@ public class UserService {
 
         User user = new User();
 
-        user.setName(request.getName());
-        user.setEmail(request.getEmail().toLowerCase().trim());
+        user.setName(name);
+        user.setEmail(email);
         user.setDateOfBirth(request.getDateOfBirth());
 
         user.setExperienceLevel(request.getExperienceLevel());
@@ -91,7 +93,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (request.getName() != null) {
-            user.setName(request.getName());
+            user.setName(validName(request.getName()));
         }
 
         if (request.getDateOfBirth() != null) {
@@ -128,13 +130,18 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        boolean matches = passwordEncoder.matches(
-                request.getCurrentPassword(),
-                user.getPasswordHash());
+        // Accounts created with Google have no password yet. The user is
+        // already signed in, so they can set one without a current password.
+        if (user.hasPassword()) {
+            boolean matches = request.getCurrentPassword() != null
+                    && passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash());
 
-        if (!matches) {
-            throw new IllegalArgumentException("Current password is incorrect");
+            if (!matches) {
+                throw new IllegalArgumentException("Current password is incorrect");
+            }
         }
+
+        validatePassword(request.getNewPassword());
 
         String newHashedPassword = passwordEncoder.encode(request.getNewPassword());
 
@@ -170,5 +177,55 @@ public class UserService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    // MARK: - Validation
+
+    static final int MIN_PASSWORD_LENGTH = 8;
+
+    // BCrypt only uses the first 72 bytes, so anything past that would be
+    // silently ignored. Reject it instead.
+    static final int MAX_PASSWORD_BYTES = 72;
+
+    private static final java.util.regex.Pattern EMAIL =
+            java.util.regex.Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+
+    private static String validName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name is required");
+        }
+
+        String trimmed = name.trim();
+
+        if (trimmed.length() > 100) {
+            throw new IllegalArgumentException("Name must be 100 characters or fewer");
+        }
+
+        return trimmed;
+    }
+
+    private static String validEmail(String email) {
+        String normalized = email == null ? "" : email.toLowerCase().trim();
+
+        if (normalized.length() > 255 || !EMAIL.matcher(normalized).matches()) {
+            throw new IllegalArgumentException("Enter a valid email address");
+        }
+
+        return normalized;
+    }
+
+    private static void validatePassword(String password) {
+        if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Password must be at least " + MIN_PASSWORD_LENGTH + " characters");
+        }
+
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
+            throw new IllegalArgumentException("Password is too long");
+        }
+
+        if (password.isBlank()) {
+            throw new IllegalArgumentException("Password can't be only spaces");
+        }
     }
 }

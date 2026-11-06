@@ -16,6 +16,8 @@ public class UserResponse {
     private User.InvestmentGoal investmentGoal;
     private User.RiskTolerance riskTolerance;
     private User.Role role;
+    private boolean hasPassword;
+    private boolean googleLinked;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -29,6 +31,8 @@ public class UserResponse {
         this.investmentGoal = user.getInvestmentGoal();
         this.riskTolerance = user.getRiskTolerance();
         this.role = user.getRole();
+        this.hasPassword = user.hasPassword();
+        this.googleLinked = user.getGoogleSubject() != null;
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
     }
@@ -63,6 +67,15 @@ public class UserResponse {
 
     public User.Role getRole() {
         return role;
+    }
+
+    /** False for accounts that only sign in with Google. */
+    public boolean isHasPassword() {
+        return hasPassword;
+    }
+
+    public boolean isGoogleLinked() {
+        return googleLinked;
     }
 
     public LocalDateTime getCreatedAt() {

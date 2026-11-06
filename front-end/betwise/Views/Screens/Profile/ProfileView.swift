@@ -45,7 +45,7 @@ struct ProfileView: View {
                         NavigationLink {
                             ChangePasswordView(session: session)
                         } label: {
-                            Label("Change password", systemImage: "key")
+                            Label(user.hasPassword == false ? "Set password" : "Change password", systemImage: "key")
                         }
                     }
                     .listRowBackground(AppColors.surface)

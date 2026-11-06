@@ -48,8 +48,15 @@ public class User {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    // Null for accounts that only sign in with Google. SchemaUpgrades drops
+    // the NOT NULL constraint on databases created before Google sign-in.
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
+
+    // Google's stable account ID (the ID token's `sub` claim). Emails can
+    // change, so Google accounts are matched on this, not on email.
+    @Column(name = "google_subject", unique = true, length = 64)
+    private String googleSubject;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "risk_tolerance", length = 50)
@@ -88,6 +95,18 @@ public class User {
 
     public boolean isAdmin() {
         return role == Role.ADMIN;
+    }
+
+    public String getGoogleSubject() {
+        return googleSubject;
+    }
+
+    public void setGoogleSubject(String googleSubject) {
+        this.googleSubject = googleSubject;
+    }
+
+    public boolean hasPassword() {
+        return passwordHash != null && !passwordHash.isEmpty();
     }
 
     public User(
